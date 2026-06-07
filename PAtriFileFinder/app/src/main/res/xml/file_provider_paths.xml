@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Grants read access to any path on external storage so we can open files via Intent -->
+    <external-path name="external" path="." />
+</paths>
