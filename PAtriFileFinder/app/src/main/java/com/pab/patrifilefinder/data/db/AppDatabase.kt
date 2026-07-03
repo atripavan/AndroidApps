@@ -8,7 +8,7 @@ import com.pab.patrifilefinder.data.model.FileRecordFts
 
 @Database(
     entities = [FileRecord::class, FileRecordFts::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

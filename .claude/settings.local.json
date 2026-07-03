@@ -5,7 +5,26 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash('C:\\\\Users\\\\atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe' devices *)",
+      "Bash('C:\\\\Users\\\\atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe' shell *)",
+      "Bash(/c/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe shell *)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell getprop ro.product.model)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell getconf PAGE_SIZE)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 logcat -d -t 400)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 shell pm list packages)",
+      "Bash($ADB devices *)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell pidof com.pab.patrifilefinder)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell 'run-as com.pab.patrifilefinder sqlite3 /data/data/com.pab.patrifilefinder/databases/patrifilefinder.db '\\\\''SELECT COUNT\\(*\\) AS total, SUM\\(embedding IS NOT NULL\\) AS with_emb FROM files;'\\\\''')",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell 'run-as com.pab.patrifilefinder sqlite3 /data/data/com.pab.patrifilefinder/databases/patrifilefinder.db '\\\\''SELECT substr\\(mimeType,1,20\\), COUNT\\(*\\) FROM files GROUP BY substr\\(mimeType,1,20\\) ORDER BY 2 DESC LIMIT 20;'\\\\''')",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell dumpsys jobscheduler)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W logcat -d --pid=32009)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell appops get com.pab.patrifilefinder MANAGE_EXTERNAL_STORAGE)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe -s RZCY80X5B7W shell dumpsys package com.pab.patrifilefinder)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe devices *)",
+      "Bash(C:/Users/atrip/AppData/Local/Android/Sdk/platform-tools/adb.exe logcat *)",
+      "Bash(gh repo *)",
+      "Bash(curl *)"
     ]
   }
 }

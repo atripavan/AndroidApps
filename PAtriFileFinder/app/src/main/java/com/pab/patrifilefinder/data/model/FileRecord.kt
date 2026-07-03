@@ -1,11 +1,17 @@
 package com.pab.patrifilefinder.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class Source { WHATSAPP, TELEGRAM, DOWNLOADS, OTHER }
 
-@Entity(tableName = "files")
+// Unique index on path so the DB itself rejects duplicate files, even if two scans
+// race — the in-code dedup filter is a first line of defense, this is the guarantee.
+@Entity(
+    tableName = "files",
+    indices = [Index(value = ["path"], unique = true)],
+)
 data class FileRecord(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,

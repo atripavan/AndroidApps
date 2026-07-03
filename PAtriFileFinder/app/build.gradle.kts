@@ -21,6 +21,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // MediaPipe ships no x86_64 native lib, but the emulator advertises arm64-v8a
+        // (binary translation). Restricting to arm64-v8a makes the installer pick the
+        // arm64 lib so the text embedder loads. Real phones are arm64-v8a too.
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -37,6 +44,11 @@ android {
     buildFeatures {
         compose = true
     }
+    androidResources {
+        // MediaPipe reads the model via an asset file descriptor, which needs it
+        // stored uncompressed in the APK.
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -52,6 +64,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.material)
 
     // Room
     implementation(libs.room.runtime)
@@ -74,6 +87,13 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore.preferences)
+
+    // PDF text extraction (for indexing file contents into textSnippet)
+    implementation(libs.pdfbox.android)
+
+    // On-device text embeddings for semantic search (Universal Sentence Encoder).
+    // Runs entirely on-device — no file data ever leaves the phone.
+    implementation(libs.mediapipe.tasks.text)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

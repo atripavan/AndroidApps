@@ -1,0 +1,21 @@
+{
+  "_comment": "Tells the app who 'me / my / mine' means. Put your own names, nicknames and initials under 'me', and other people (e.g. family members whose files should be hidden when you search 'my ...') under 'others'. Matching is case-insensitive against each file's name and extracted text. Lines starting with REPLACE_WITH are ignored, so replace them with real values. After editing, fully close and reopen the app for changes to take effect.",
+  "me": [
+    "pavan atri",
+    "pavan",
+    "atri"
+  ],
+ "wife": [
+  "rekha"
+],
+ "appa": [
+  "gopalaswamy",
+  "gopalswamy"
+],
+  "amma": [
+  "poornima"
+],
+  "others": [
+    "sharat, gopalaswamy, gopalswamy, poornima, samanyu"
+  ]
+}

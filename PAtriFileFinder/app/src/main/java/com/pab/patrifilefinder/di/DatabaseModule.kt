@@ -19,6 +19,9 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "patrifilefinder.db")
+            // The DB is a rebuildable index of files — on any schema change, just drop
+            // and recreate rather than writing migrations, then re-scan to repopulate.
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides

@@ -23,11 +23,12 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 | Full file system | `MANAGE_EXTERNAL_STORAGE` permission scans all accessible folders |
 
 ### 3. AI semantic search (on-device)
-- Uses MiniLM-L6 TFLite model (~22 MB, bundled in the app)
-- Generates a 384-dimension embedding for each file's name and extracted text snippet
+- Uses MediaPipe Text Embedder with Google's Universal Sentence Encoder model (~6 MB, bundled in `assets/`)
+- Runs entirely on-device — no file data ever leaves the phone
+- Generates an embedding for each file's name and extracted text snippet at index time
 - At query time, embeds the user's query and ranks results by cosine similarity
 - Blended ranking: `score = 0.6 × semantic + 0.4 × keyword`
-- Falls back to keyword-only on devices with less than 2 GB RAM
+- Falls back to keyword-only on devices with less than 2 GB RAM, or if the model asset is missing
 
 ### 4. Smart filters
 - Filter by source (All / WhatsApp / Telegram / Downloads)
@@ -55,6 +56,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 - Duplicate file detection
 - Cloud sources (Google Drive, Dropbox)
 - Share sheet target
+- In-app `PreviewScreen` (image/PDF preview) — for now, tapping a result opens it via the native "open with" Intent
 
 ---
 
@@ -67,7 +69,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 │         UI layer                │
 │   Jetpack Compose screens       │
 │   SearchScreen, FilterSheet,    │
-│   PreviewScreen, HomeScreen     │
+│   HomeScreen                    │
 └────────────┬────────────────────┘
              │ StateFlow / events
 ┌────────────▼────────────────────┐
@@ -89,7 +91,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 │   Room DB (SQLite + FTS4)       │
 │   FileScanner (MediaStore +     │
 │     java.io.File)               │
-│   TFLite Interpreter (MiniLM)   │
+│   MediaPipe Text Embedder (USE) │
 │   WorkManager (periodic scan)   │
 │   FileObserver (real-time)      │
 └─────────────────────────────────┘
@@ -108,7 +110,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 | sizeBytes | Long | File size |
 | dateAdded | Long | Unix timestamp |
 | textSnippet | String? | First 500 chars of content (PDFs, TXT, DOCX) |
-| embedding | ByteArray? | 384-float MiniLM embedding, stored as BLOB |
+| embedding | ByteArray? | Universal Sentence Encoder embedding (float vector), stored as little-endian BLOB |
 | openCount | Int | Tracks frequency for "recent/frequent" ranking |
 
 **`FileRecordFts` virtual table**
@@ -135,7 +137,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 **Goal:** App runs, files are indexed, basic search works.
 
 1. Create Android project in Android Studio — min SDK 26, Kotlin, Compose, Material 3
-2. Add Gradle dependencies: Room, Hilt, WorkManager, DataStore, Coil, TFLite
+2. Add Gradle dependencies: Room, Hilt, WorkManager, DataStore, Coil, MediaPipe Tasks Text
 3. Define `FileRecord` entity + `FileRecordFts` virtual table + DAOs
 4. Write `FileScanner` — walks `/Download/`, `/WhatsApp/Media/`, `/Telegram/` using `MediaStore` and `java.io.File`
 5. Wire up `WorkManager` `PeriodicWorkRequest` (every 15 min, incremental)
@@ -149,28 +151,29 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 ### Week 2 — Search quality + filters
 **Goal:** Search is reliable, filters work, files open correctly.
 
-1. Add FTS4 full-text search — keyword search across `name` and `textSnippet`
-2. Add content extraction for PDFs (Android `PdfRenderer`) and TXT files → populate `textSnippet`
-3. Build `FilterState` sealed class — source, file type, date range
+1. Add FTS4 full-text search — keyword search across `name` and `textSnippet` ✅
+2. Add content extraction for PDFs (PdfBox-Android — `PdfRenderer` only rasterises pages, it cannot extract text) and TXT files → populate `textSnippet`
+3. Build `FilterState` — source, file type, date range
 4. Build filter bottom sheet UI — chips for source and type, date range picker
-5. Wire filters into Room DAO queries
-6. Build `PreviewScreen` — image preview (Coil), PDF first page, open-with Intent
-7. Long press on result → share / copy path bottom sheet
+5. Wire filters into search/recent results (filters combine with the search text — AND)
+6. Long press on result → share / copy path bottom sheet
 
-**Done when:** You can filter by type and date, preview images and PDFs, and open any file.
+**Done when:** You can filter by type and date, search inside PDF/TXT content, and open any file.
+
+> PreviewScreen was deferred to v2 — see "What is deferred to v2" above.
 
 ---
 
 ### Week 3 — AI semantic search
 **Goal:** Natural-language queries return meaningful results.
 
-1. Download MiniLM-L6-v2 TFLite model, add to `assets/`
-2. Build `EmbeddingEngine` — wraps `TFLite Interpreter`, handles tokenisation (BertTokenizer) and inference
+1. Download the Universal Sentence Encoder model (`universal_sentence_encoder.tflite`), add to `assets/`
+2. Build `EmbeddingEngine` — wraps MediaPipe `TextEmbedder` (tokenisation/pooling/normalisation handled internally), exposes `embed()` + cosine + BLOB↔FloatArray helpers
 3. During indexing: generate embedding for each file's `name + textSnippet`, store as BLOB in `FileRecord`
 4. At search time: embed the query, load stored embeddings, compute cosine similarity in Kotlin
 5. Blend scores: `final = 0.6 × semantic + 0.4 × FTS keyword score`
 6. Add RAM check — skip embedding on devices with less than 2 GB RAM, fall back to keyword-only
-7. Add "AI search" toggle in settings so user can switch modes
+7. Add "AI search" toggle (DataStore-backed) so user can switch modes
 
 **Done when:** Searching "tax document last year" returns the right PDF even without exact filename match.
 
@@ -220,7 +223,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 | Embedding quality | Log cosine similarity scores to Logcat (with Timber tag `EmbeddingEngine`) and verify top-K results make sense |
 | WorkManager not firing | Use `adb shell cmd jobscheduler run -f com.yourapp <job_id>` to force-trigger the job |
 | File scanner missing folders | `adb shell ls` to verify folder paths exist and are readable with current permissions |
-| TFLite inference slow | TFLite Benchmark Tool APK — run on the actual target device before committing to the model |
+| Embedding inference slow | Time `EmbeddingEngine.embed()` on the target device; embeddings are computed at index time, not per-keystroke, so cost is amortised |
 | Memory pressure during scan | Android Profiler → Memory tab → watch heap during first full index of a large file system |
 
 ---
@@ -230,6 +233,7 @@ A single Android app that indexes files across WhatsApp, Telegram, and browser d
 - **Room migrations** — every schema change needs a `Migration` object. Test with `MigrationTestHelper`. A bad migration crashes the app on update for all existing users. Write migrations as you go, not at the end.
 - **First-time index on large phones** — users with 10k+ files will wait minutes. Run the first scan as a foreground `Service` with a progress notification so Android does not kill it.
 - **`MANAGE_EXTERNAL_STORAGE` on Play Store** — requires a privacy policy and a clear use-case declaration in the Data Safety form. Write the privacy policy before submitting.
-- **MiniLM on low-RAM devices** — check `ActivityManager.getMemoryInfo()` before loading the model. Gracefully degrade to keyword-only search below 2 GB.
+- **Embeddings on low-RAM devices** — check `ActivityManager.getMemoryInfo()` before loading the model. Gracefully degrade to keyword-only search below 2 GB.
+- **Model asset must be uncompressed** — MediaPipe opens the `.tflite` via an asset file descriptor, so set `androidResources { noCompress += "tflite" }` in `app/build.gradle.kts` or it will fail to load.
 - **FTS4 vs FTS5** — Room supports FTS4 by default on all API levels. FTS5 is faster but requires API 30+. Stick with FTS4 for v1 to keep compatibility broad.
 - **Stale index entries** — files can be deleted from the file system but remain in the Room index. Add a cleanup pass in the indexer: for every `FileRecord`, check `File(path).exists()` and delete the record if false.

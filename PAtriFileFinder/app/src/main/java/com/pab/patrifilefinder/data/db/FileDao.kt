@@ -18,6 +18,12 @@ interface FileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(files: List<FileRecord>)
 
+    // Insert new files, silently skipping any whose path already exists (unique index).
+    // Used by the scanner so a concurrent scan can't create duplicate rows and existing
+    // rows keep their embedding / open-count.
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllIgnoringDuplicates(files: List<FileRecord>)
+
     @Delete
     suspend fun delete(file: FileRecord)
 
@@ -44,6 +50,14 @@ interface FileDao {
 
     @Query("UPDATE files SET embedding = :embedding WHERE id = :id")
     suspend fun updateEmbedding(id: Long, embedding: ByteArray)
+
+    // All files that already have a semantic embedding — the candidate pool for AI search.
+    @Query("SELECT * FROM files WHERE embedding IS NOT NULL")
+    suspend fun getAllWithEmbeddings(): List<FileRecord>
+
+    // Files still needing an embedding — the resumable work queue for the backfill pass.
+    @Query("SELECT * FROM files WHERE embedding IS NULL")
+    suspend fun getFilesWithoutEmbedding(): List<FileRecord>
 
     // Keyword search via FTS4 — joins back to main table to return full FileRecord rows.
     // Caller should append * to the query string for prefix matching (e.g. "tax*").
